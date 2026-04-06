@@ -7,11 +7,22 @@ export type SelectOption = {
 };
 
 type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
+  allowEmpty?: boolean;
   options: SelectOption[];
+  placeholder?: string;
 };
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, options, ...props }, ref) => (
+  (
+    {
+      allowEmpty = true,
+      className,
+      options,
+      placeholder = '请选择',
+      ...props
+    },
+    ref,
+  ) => (
     <select
       ref={ref}
       className={cn(
@@ -20,7 +31,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       )}
       {...props}
     >
-      <option value="">请选择</option>
+      {allowEmpty ? <option value="">{placeholder}</option> : null}
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}

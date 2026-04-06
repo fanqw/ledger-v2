@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import type { OrderDto } from '@ledger/shared';
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, type OrderDto, type PageData } from '@ledger/shared';
 import { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiClient } from '@/lib/api/client';
 import { useCrudPanel } from '@/lib/hooks/use-crud-panel';
 import { formatAmount, formatDateTime } from '@/lib/utils/format';
+import { PaginationControls } from './pagination-controls';
 
 export function OrdersPanel() {
   const createInitialForm = useCallback(
@@ -28,11 +29,25 @@ export function OrdersPanel() {
     }),
     [],
   );
-  const fetchItems = useCallback(async (keyword: string) => {
+  const fetchItems = useCallback(async ({
+    keyword,
+    page,
+    pageSize,
+  }: {
+    keyword: string;
+    page: number;
+    pageSize: number;
+  }): Promise<PageData<OrderDto>> => {
     const response = await apiClient.get('/orders', {
-      params: { page: 1, pageSize: 100, keyword },
+      params: { page, pageSize, keyword },
     });
-    return response.data.success ? response.data.data.items : [];
+
+    return response.data.success
+      ? response.data.data
+      : {
+          items: [],
+          meta: { page: DEFAULT_PAGE, pageSize: DEFAULT_PAGE_SIZE, total: 0 },
+        };
   }, []);
   const createItem = useCallback(async (form: { name: string; description: string }) => {
     const response = await apiClient.post('/orders', form);
@@ -106,9 +121,22 @@ export function OrdersPanel() {
                 </td>
               </tr>
             ))}
+            {crud.items.length === 0 ? (
+              <tr>
+                <td className="px-4 py-6 text-center text-slate-500" colSpan={6}>
+                  {crud.loading ? '加载中...' : '暂无订单'}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
+      <PaginationControls
+        loading={crud.loading}
+        meta={crud.meta}
+        onPageChange={crud.setPage}
+        onPageSizeChange={crud.setPageSize}
+      />
 
       <Dialog open={crud.open} onClose={crud.closeDialog} title={crud.editingItem ? '编辑订单' : '新增订单'}>
         <form

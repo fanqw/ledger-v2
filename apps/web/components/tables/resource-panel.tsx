@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, type PageData } from '@ledger/shared';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
@@ -9,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiClient } from '@/lib/api/client';
 import { useCrudPanel } from '@/lib/hooks/use-crud-panel';
 import { formatDateTime } from '@/lib/utils/format';
+import { PaginationControls } from './pagination-controls';
 
 type BaseItem = {
   id: string;
@@ -42,11 +44,25 @@ export function ResourcePanel<T extends BaseItem>({
     [],
   );
   const fetchItems = useCallback(
-    async (keyword: string) => {
+    async ({
+      keyword,
+      page,
+      pageSize,
+    }: {
+      keyword: string;
+      page: number;
+      pageSize: number;
+    }): Promise<PageData<T>> => {
       const response = await apiClient.get(endpoint, {
-        params: { page: 1, pageSize: 100, keyword },
+        params: { page, pageSize, keyword },
       });
-      return response.data.success ? response.data.data.items : [];
+
+      return response.data.success
+        ? response.data.data
+        : {
+            items: [],
+            meta: { page: DEFAULT_PAGE, pageSize: DEFAULT_PAGE_SIZE, total: 0 },
+          };
     },
     [endpoint],
   );
@@ -145,9 +161,22 @@ export function ResourcePanel<T extends BaseItem>({
                 </td>
               </tr>
             ))}
+            {crud.items.length === 0 ? (
+              <tr>
+                <td className="px-4 py-6 text-center text-slate-500" colSpan={mergedColumns.length + 1}>
+                  {crud.loading ? '加载中...' : '暂无数据'}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
+      <PaginationControls
+        loading={crud.loading}
+        meta={crud.meta}
+        onPageChange={crud.setPage}
+        onPageSizeChange={crud.setPageSize}
+      />
 
       <Dialog open={crud.open} onClose={crud.closeDialog} title={crud.editingItem ? `编辑${title}` : `新增${title}`}>
         <form

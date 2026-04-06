@@ -1,5 +1,12 @@
 'use client';
 
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  type PageData,
+  type PageMeta,
+  type PageQuery,
+} from '@ledger/shared';
 import { useCallback, useEffect, useState } from 'react';
 
 export type MutationResult = {
@@ -11,10 +18,16 @@ export type UseCrudPanelOptions<TItem, TForm> = {
   createInitialForm: () => TForm;
   mapItemToForm: (item: TItem) => TForm;
   getItemId: (item: TItem) => string;
-  fetchItems: (keyword: string) => Promise<TItem[]>;
+  fetchItems: (query: Required<PageQuery>) => Promise<PageData<TItem>>;
   createItem: (form: TForm) => Promise<MutationResult>;
   updateItem: (id: string, form: TForm) => Promise<MutationResult>;
   deleteItem: (id: string) => Promise<MutationResult>;
+};
+
+const EMPTY_META: PageMeta = {
+  page: DEFAULT_PAGE,
+  pageSize: DEFAULT_PAGE_SIZE,
+  total: 0,
 };
 
 export function useCrudPanel<TItem, TForm>({
@@ -27,7 +40,10 @@ export function useCrudPanel<TItem, TForm>({
   deleteItem,
 }: UseCrudPanelOptions<TItem, TForm>) {
   const [items, setItems] = useState<TItem[]>([]);
-  const [keyword, setKeyword] = useState('');
+  const [keyword, setKeywordState] = useState('');
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [meta, setMeta] = useState<PageMeta>(EMPTY_META);
   const [open, setOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TItem | null>(null);
   const [form, setForm] = useState<TForm>(createInitialForm);
@@ -39,12 +55,23 @@ export function useCrudPanel<TItem, TForm>({
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const nextItems = await fetchItems(keyword);
-      setItems(nextItems);
+      const nextData = await fetchItems({ keyword, page, pageSize });
+      setItems(nextData.items);
+      setMeta(nextData.meta);
     } finally {
       setLoading(false);
     }
-  }, [fetchItems, keyword]);
+  }, [fetchItems, keyword, page, pageSize]);
+
+  const setKeyword = useCallback((nextKeyword: string) => {
+    setKeywordState(nextKeyword);
+    setPage(DEFAULT_PAGE);
+  }, []);
+
+  const changePageSize = useCallback((nextPageSize: number) => {
+    setPageSize(nextPageSize);
+    setPage(DEFAULT_PAGE);
+  }, []);
 
   useEffect(() => {
     void loadData();
@@ -98,19 +125,31 @@ export function useCrudPanel<TItem, TForm>({
         const result = await deleteItem(id);
         setMessage(result.ok ? result.message || '删除成功' : result.message || '删除失败');
         if (result.ok) {
-          await loadData();
+          const shouldGoPreviousPage =
+            items.length === 1 && page > DEFAULT_PAGE && meta.total > items.length;
+
+          if (shouldGoPreviousPage) {
+            setPage((currentPage) => Math.max(DEFAULT_PAGE, currentPage - 1));
+          } else {
+            await loadData();
+          }
         }
       } finally {
         setDeletingId(null);
       }
     },
-    [deleteItem, getItemId, loadData],
+    [deleteItem, getItemId, items.length, loadData, meta.total, page],
   );
 
   return {
     items,
     keyword,
     setKeyword,
+    page,
+    setPage,
+    pageSize,
+    setPageSize: changePageSize,
+    meta,
     open,
     openCreate,
     openEdit,

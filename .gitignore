@@ -17,3 +17,4 @@ coverage
 output/playwright/
 tmp/
 *.log
+PLAN.md

@@ -1,7 +1,14 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import type { CategoryDto, CommodityDto, UnitDto } from '@ledger/shared';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  type CategoryDto,
+  type CommodityDto,
+  type PageData,
+  type UnitDto,
+} from '@ledger/shared';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
@@ -11,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiClient } from '@/lib/api/client';
 import { useCrudPanel } from '@/lib/hooks/use-crud-panel';
 import { formatDateTime } from '@/lib/utils/format';
+import { PaginationControls } from './pagination-controls';
 
 export function CommodityPanel() {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -35,9 +43,17 @@ export function CommodityPanel() {
     [],
   );
   const fetchItems = useCallback(
-    async (keyword: string) => {
+    async ({
+      keyword,
+      page,
+      pageSize,
+    }: {
+      keyword: string;
+      page: number;
+      pageSize: number;
+    }): Promise<PageData<CommodityDto>> => {
       const [commoditiesRes, categoriesRes, unitsRes] = await Promise.all([
-        apiClient.get('/commodities', { params: { page: 1, pageSize: 100, keyword } }),
+        apiClient.get('/commodities', { params: { page, pageSize, keyword } }),
         apiClient.get('/categories', { params: { page: 1, pageSize: 100 } }),
         apiClient.get('/units', { params: { page: 1, pageSize: 100 } }),
       ]);
@@ -49,7 +65,12 @@ export function CommodityPanel() {
         setUnits(unitsRes.data.data.items);
       }
 
-      return commoditiesRes.data.success ? commoditiesRes.data.data.items : [];
+      return commoditiesRes.data.success
+        ? commoditiesRes.data.data
+        : {
+            items: [],
+            meta: { page: DEFAULT_PAGE, pageSize: DEFAULT_PAGE_SIZE, total: 0 },
+          };
     },
     [],
   );
@@ -127,9 +148,22 @@ export function CommodityPanel() {
                 </td>
               </tr>
             ))}
+            {crud.items.length === 0 ? (
+              <tr>
+                <td className="px-4 py-6 text-center text-slate-500" colSpan={6}>
+                  {crud.loading ? '加载中...' : '暂无商品'}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
+      <PaginationControls
+        loading={crud.loading}
+        meta={crud.meta}
+        onPageChange={crud.setPage}
+        onPageSizeChange={crud.setPageSize}
+      />
       <Dialog open={crud.open} onClose={crud.closeDialog} title={crud.editingItem ? '编辑商品' : '新增商品'}>
         <form
           className="space-y-4"
