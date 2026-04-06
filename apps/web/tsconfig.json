@@ -2,6 +2,7 @@
   "extends": "../../packages/config/tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "incremental": false,
     "noImplicitAny": false,
     "plugins": [{ "name": "next" }],
     "paths": {

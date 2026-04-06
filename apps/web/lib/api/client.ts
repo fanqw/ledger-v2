@@ -6,6 +6,7 @@ import type { ApiResult } from '@ledger/shared';
 export const apiClient = axios.create({
   baseURL: '/api',
   withCredentials: true,
+  validateStatus: () => true,
   headers: {
     'Content-Type': 'application/json',
   },

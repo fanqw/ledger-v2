@@ -33,35 +33,39 @@
 
 默认采用单一全栈应用承载页面、服务端逻辑与数据访问编排。仅在出现明确拆分收益时，才新增独立服务或额外包。
 
-## 开发命令
+## First Run
 
-全仓统一使用 `pnpm` 作为依赖管理和脚本入口。工具链落地后，以仓库脚本为准；推荐命令约定如下：
+全仓统一使用 `pnpm` 作为依赖管理和脚本入口。按下面的顺序即可完成一次从零启动：
 
-- `pnpm install`：安装工作区依赖。
-- `pnpm run dev`：启动默认开发环境。
+1. `pnpm install`：安装工作区依赖。
+2. `docker compose up -d postgres redis`：启动 PostgreSQL 和 Redis。
+3. `pnpm run db:generate`：生成 Prisma Client。
+4. `pnpm run db:migrate`：执行本地 Prisma 迁移。
+5. `pnpm --filter web prisma:seed`：初始化默认管理员账号。
+6. `pnpm run dev`：启动 `apps/web` 开发环境，或在发布场景中使用 `pnpm run build` 和 `pnpm run start`。
+7. `pnpm run lint`、`pnpm run test`、`pnpm run build`：执行代码检查、测试和构建验证。
+8. 浏览器级校验：登录后访问分类、单位、商品和订单页面，确认 CRUD 和汇总展示可用。
+
+如果直接使用 `docker compose up` 启动完整容器栈，`web` 容器会先自动执行 `pnpm --filter web db:init`，其中包含 `prisma migrate deploy` 和 `prisma:seed`，再启动 Next.js。
+
+常用入口也保留在根脚本中：
+
 - `pnpm --filter web dev`：仅启动全栈 Web 应用。
-- `pnpm run build`：构建全仓或根脚本定义的应用。
-- `pnpm run lint`：运行 ESLint 检查。
 - `pnpm run format`：运行 Prettier 格式化。
-- `pnpm run test`：运行测试。
-- `pnpm run db:generate`：生成 Prisma Client。
-- `pnpm run db:migrate`：执行本地 Prisma 迁移。
-- `pnpm --filter web prisma:seed`：初始化默认管理员账号。
-- `docker compose up`：启动本地依赖与容器化开发环境。
+- `pnpm run start`：启动生产模式的全栈 Web 应用。
 
-如果某条命令尚未落地，应在实现对应能力时同步补充脚本和本文档。
-
-## 环境与基础设施
+## Environment
 
 `v2` 默认依赖以下基础设施：
 
 - PostgreSQL：主业务数据存储。
 - Redis：缓存、会话、限流或异步辅助能力。
 - Docker Compose：本地开发和 CI/CD 中统一拉起依赖环境。
+- 本地环境变量：请基于 `.env.example` 复制并按实际环境补齐 `DATABASE_URL`、`REDIS_URL` 和 `SESSION_SECRET`。
 
 后续新增环境变量、镜像标签、服务端口、数据卷或初始化脚本时，必须同步更新本文档。
 
-## 测试要求
+## Validation
 
 新增业务逻辑时，应在同一变更或紧密相关的提交中补充测试。测试应覆盖：
 
@@ -69,13 +73,29 @@
 - 服务端业务逻辑与接口行为。
 - 数据访问层的核心查询或约束。
 
-测试目录可以放在各包约定位置或统一的 `tests/` 下，但命名应与被测模块保持清晰对应。
+测试目录可以放在各包约定位置或统一的 `tests/` 下，但命名应与被测模块保持清晰对应。当前推荐的验证顺序是 `db:generate`、`db:migrate`、`prisma:seed`、`lint`、`test`、`build`，再做浏览器级冒烟。
 
 ## v1 与 v2 边界
 
 - `v1` 仅作参考，不继续承载新功能。
 - `v2` 的实现、文档、配置、测试和部署方案都应写在新的工作区结构中。
 - 从 `v1` 迁移业务时，应优先复用业务语义和数据关系，不直接复制旧实现中的工程结构和历史问题。
+
+## Commands
+
+- `pnpm install`：安装依赖。
+- `pnpm run dev`：启动默认开发环境。
+- `pnpm --filter web dev`：仅启动全栈 Web 应用。
+- `pnpm run build`：构建全仓或根脚本定义的应用。
+- `pnpm run lint`：运行 ESLint 检查。
+- `pnpm run format`：运行 Prettier 格式化。
+- `pnpm run test`：运行测试。
+- `pnpm run db:generate`：生成 Prisma Client。
+- `pnpm run db:migrate`：执行 Prisma 迁移。
+- `pnpm --filter web db:init`：在生产启动前执行迁移并初始化默认管理员。
+- `pnpm --filter web prisma:seed`：初始化默认管理员账号。
+- `docker compose up -d postgres redis`：启动基础设施。
+- `docker compose up`：启动完整容器栈，并在 `web` 容器启动前自动完成数据库初始化。
 
 ## 文档维护
 
