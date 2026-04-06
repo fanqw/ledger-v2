@@ -1,1 +1,13 @@
+/node_modules
+/.pnpm-store
+/.turbo
+/.next
 /v1
+/.env
+/.env.local
+/.DS_Store
+apps/web/.next
+apps/web/node_modules
+apps/web/coverage
+v1/ledger-frontend/node_modules
+v1/ledger-backend/node_modules
