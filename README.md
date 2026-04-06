@@ -44,7 +44,8 @@
 5. `pnpm --filter web prisma:seed`：初始化默认管理员账号。
 6. `pnpm run dev`：启动 `apps/web` 开发环境，或在发布场景中使用 `pnpm run build` 和 `pnpm run start`。
 7. `pnpm run lint`、`pnpm run test`、`pnpm run build`：执行代码检查、测试和构建验证。
-8. 浏览器级校验：登录后访问分类、单位、商品和订单页面，确认 CRUD 和汇总展示可用。
+8. 浏览器级校验前执行 `pnpm --filter web playwright:install` 安装 Chromium。
+9. 执行 `pnpm --filter web smoke:e2e` 进行登录与核心 CRUD 浏览器冒烟校验。
 
 如果直接使用 `docker compose up` 启动完整容器栈，`web` 容器会先自动执行 `pnpm --filter web db:init`，其中包含 `prisma migrate deploy` 和 `prisma:seed`，再启动 Next.js。
 
@@ -94,6 +95,8 @@
 - `pnpm run db:migrate`：执行 Prisma 迁移。
 - `pnpm --filter web db:init`：在生产启动前执行迁移并初始化默认管理员。
 - `pnpm --filter web prisma:seed`：初始化默认管理员账号。
+- `pnpm --filter web playwright:install`：安装 Playwright Chromium 浏览器。
+- `pnpm --filter web smoke:e2e`：执行浏览器级核心链路冒烟测试。
 - `docker compose up -d postgres redis`：启动基础设施。
 - `docker compose up`：启动完整容器栈，并在 `web` 容器启动前自动完成数据库初始化。
 
